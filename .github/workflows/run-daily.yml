@@ -21,6 +21,13 @@ jobs:
     - name: Install dependencies
       run: pip install -r requirements.txt
 
+    - name: Test environment
+      run: |
+        echo "Python version:"
+        python --version
+        echo "Files in repo:"
+        ls -la
+
     - name: Run filter
       env:
         CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
