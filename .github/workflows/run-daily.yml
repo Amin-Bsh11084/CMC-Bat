@@ -1,0 +1,33 @@
+name: Run CMC Filter Daily
+
+on:
+  schedule:
+    - cron: "0 8 * * *"   # هر روز ساعت 08:00 UTC (حدود 11:30 صبح ایران)
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+
+    - name: Run filter
+      env:
+        CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
+      run: python cmc_filter.py
+
+    - name: Upload results
+      uses: actions/upload-artifact@v3
+      with:
+        name: filtered_coins
+        path: filtered_coins.csv
