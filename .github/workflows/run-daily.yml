@@ -2,7 +2,7 @@ name: Run CMC Filter Daily
 
 on:
   schedule:
-    - cron: "0 8 * * *"   # هر روز ساعت 08:00 UTC
+    - cron: "0 8 * * *"
   workflow_dispatch:
 
 jobs:
@@ -21,13 +21,13 @@ jobs:
     - name: Install dependencies
       run: pip install -r requirements.txt
 
-    - name: Run filter with logging
-      run: |
-        echo "🚀 Starting cmc_filter.py..." > run_log.txt
-        python cmc_filter.py >> run_log.txt 2>&1 || echo "❌ Script failed, check logs." >> run_log.txt
+    - name: Run filter and generate CSV
+      run: python cmc_filter.py
 
-    - name: Upload log file
-      uses: actions/upload-artifact@v4
-      with:
-        name: cmc-filter-logs
-        path: run_log.txt
+    - name: Commit and push CSV
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git add data/cmc_list.csv
+        git commit -m "Daily update: $(date +'%Y-%m-%d %H:%M:%S')" || echo "No changes to commit"
+        git push
