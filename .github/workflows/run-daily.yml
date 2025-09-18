@@ -2,7 +2,7 @@ name: Run CMC Filter Daily
 
 on:
   schedule:
-    - cron: "0 8 * * *"   # هر روز ساعت 08:00 UTC
+    - cron: "0 8 * * *"   # اجرای خودکار هر روز ساعت 08:00 UTC
   workflow_dispatch:       # اجرای دستی هم فعال
 
 jobs:
@@ -10,11 +10,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # --- مرحله 1: گرفتن ریپو
+    # --- مرحله 1: دریافت کد ریپو
     - name: Checkout repo
       uses: actions/checkout@v3
       with:
-        persist-credentials: false
+        persist-credentials: true   # اجازه بده git push از همون remote استفاده کنه
 
     # --- مرحله 2: نصب پایتون
     - name: Set up Python
@@ -26,22 +26,25 @@ jobs:
     - name: Install dependencies
       run: pip install -r requirements.txt
 
-    # --- مرحله 4: اجرای اسکریپت
+    # --- مرحله 4: اجرای اسکریپت و ساخت CSV
     - name: Run filter and generate CSV
       env:
         CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
       run: |
-        echo "🚀 Running cmc_filter.py"
+        echo "🚀 Running cmc_filter.py..."
         python cmc_filter.py || (echo "❌ Script failed!" && exit 1)
 
-    # --- مرحله 5: Commit و Push
+    # --- مرحله 5: Commit و Push به شاخه main
     - name: Commit and push CSV
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
         git add data/cmc_list.csv
         git commit -m "Daily update: $(date +'%Y-%m-%d %H:%M:%S')" || echo "⚠️ No changes to commit"
-        git pull https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git main --rebase
-        git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git main
+
+        # کشیدن آخرین تغییرات و حل conflict
+        git pull origin main --rebase || echo "⚠️ Nothing to pull"
+
+        # پوش کردن به main
+        git push origin main
