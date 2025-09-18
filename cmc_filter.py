@@ -11,16 +11,15 @@ from pathlib import Path
 # تنظیمات اصلی
 # -----------------------------
 CMC_API_KEY = os.getenv("CMC_API_KEY")
-LIMIT = int(os.getenv("CMC_LIMIT", "200"))     # تعداد ارزها
-CONVERT = os.getenv("CMC_CONVERT", "USD")      # ارز مبنا
-OUTPUT_PATH = os.getenv("CMC_OUTPUT", "data/cmc_list.csv")
+LIMIT = 200
+CONVERT = "USD"
+OUTPUT_PATH = "data/cmc_list.csv"
 
 LISTINGS_URL = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest"
 INFO_URL = "https://pro-api.coinmarketcap.com/v2/cryptocurrency/info"
 
 HEADERS = {"X-CMC_PRO_API_KEY": CMC_API_KEY}
 
-# ستون‌های خروجی CSV (ترتیب همین‌طور می‌ماند)
 CSV_FIELDS = [
     "id", "slug", "name", "symbol", "cmc_rank",
     "type", "platform_name", "token_address",
@@ -32,88 +31,59 @@ CSV_FIELDS = [
     "date_added", "last_updated"
 ]
 
-
 # -----------------------------
 # توابع کمکی
 # -----------------------------
-
 def log(msg: str):
     print(msg, flush=True)
 
-
 def fetch_listings(limit=LIMIT, convert=CONVERT):
-    """گرفتن لیست ارزها از listings/latest"""
     params = {"start": 1, "limit": limit, "convert": convert}
-    log("🔹 Requesting listings from CoinMarketCap...")
+    log("🔹 Requesting listings...")
     r = requests.get(LISTINGS_URL, headers=HEADERS, params=params, timeout=40)
     log(f"   ↳ Status: {r.status_code}")
     r.raise_for_status()
-    payload = r.json()
-    data = payload.get("data", [])
-    log(f"✅ Listings received. Count: {len(data)}")
+    data = r.json().get("data", [])
+    log(f"✅ Listings received: {len(data)}")
     return data
 
-
 def fetch_info_by_ids(id_list):
-    """گرفتن اطلاعات تکمیلی (whitepaper/type/...) برای مجموعه‌ای از IDها در یک درخواست"""
     if not id_list:
         return {}
     ids = ",".join(map(str, id_list))
     params = {"id": ids}
-    log("🔹 Requesting extra info (whitepaper/type) from CMC info endpoint...")
+    log("🔹 Requesting extra info (whitepaper/type)...")
     r = requests.get(INFO_URL, headers=HEADERS, params=params, timeout=40)
     log(f"   ↳ Status: {r.status_code}")
     r.raise_for_status()
-    payload = r.json()
-    data = payload.get("data", {})
-    log(f"✅ Info received for {len(data)} ids.")
-    return data  # dict keyed by string id
-
+    return r.json().get("data", {})
 
 def detect_type(listing_item, info_obj):
-    """
-    تعیین نوع: coin یا token
-    - اگر از /info مقدار category داشته باشیم، همونو برمی‌گردونیم.
-    - در غیر این صورت اگر platform خالی باشد: coin، وگرنه token.
-    """
-    if info_obj:
-        cat = info_obj.get("category")
-        if cat in ("coin", "token"):
-            return cat
-
-    platform = listing_item.get("platform")
-    return "coin" if platform is None else "token"
-
+    if info_obj and "category" in info_obj:
+        return info_obj.get("category")
+    return "coin" if listing_item.get("platform") is None else "token"
 
 def first_whitepaper_url(info_obj):
-    """برگشت اولین لینک whitepaper اگر موجود بود"""
     if not info_obj:
         return ""
     urls = info_obj.get("urls") or {}
-    tech_docs = urls.get("technical_doc") or []
-    if tech_docs and isinstance(tech_docs, list):
-        return tech_docs[0] or ""
+    docs = urls.get("technical_doc") or []
+    if docs and isinstance(docs, list):
+        return docs[0] or ""
     return ""
 
-
 def stringify_tags(tags):
-    """لیست تگ‌ها را با ; جدا می‌کند"""
-    if not tags:
-        return ""
-    return ";".join([t for t in tags if t])
-
+    return ";".join(tags) if tags else ""
 
 def ensure_output_dir(path: str):
     Path(path).parent.mkdir(parents=True, exist_ok=True)
 
-
 def build_row(item, extra_info):
-    """ساخت یک ردیف برای CSV از دو منبع listings و info"""
     q = (item.get("quote") or {}).get(CONVERT, {})
     platform = item.get("platform") or {}
     info_obj = extra_info or {}
 
-    row = {
+    return {
         "id": item.get("id"),
         "slug": item.get("slug"),
         "name": item.get("name"),
@@ -137,23 +107,18 @@ def build_row(item, extra_info):
         "date_added": item.get("date_added"),
         "last_updated": item.get("last_updated"),
     }
-    return row
-
 
 def save_as_csv(rows, path=OUTPUT_PATH):
-    """ذخیره‌ی ردیف‌ها به CSV (هر بار جایگزین فایل قبلی می‌شود)"""
     ensure_output_dir(path)
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=CSV_FIELDS)
         writer.writeheader()
         writer.writerows(rows)
-    log(f"💾 CSV saved: {path}  (rows: {len(rows)})")
-
+    log(f"💾 CSV saved: {path} (rows: {len(rows)})")
 
 # -----------------------------
 # اجرای اصلی
 # -----------------------------
-
 def main():
     log("🚀 Starting CMC daily fetch → CSV")
     if not CMC_API_KEY:
@@ -161,23 +126,13 @@ def main():
         sys.exit(1)
 
     try:
-        listings = fetch_listings(limit=LIMIT, convert=CONVERT)
-        if not listings:
-            log("⚠️ No listings received. Exiting.")
-            sys.exit(0)
+        listings = fetch_listings()
+        ids = [it.get("id") for it in listings if it.get("id")]
+        info_map = fetch_info_by_ids(ids)
 
-        id_list = [it.get("id") for it in listings if it.get("id") is not None]
-        info_map = fetch_info_by_ids(id_list)  # dict keyed by string id
+        rows = [build_row(it, info_map.get(str(it.get("id")))) for it in listings]
+        save_as_csv(rows)
 
-        rows = []
-        for it in listings:
-            _id = it.get("id")
-            info_obj = info_map.get(str(_id)) if _id is not None else None
-            rows.append(build_row(it, info_obj))
-
-        save_as_csv(rows, OUTPUT_PATH)
-
-        # چند لاگ جمع‌بندی
         n_coin = sum(1 for r in rows if r["type"] == "coin")
         n_token = len(rows) - n_coin
         with_wp = sum(1 for r in rows if r["whitepaper_url"])
@@ -185,7 +140,6 @@ def main():
         log("🎯 Done.")
 
     except requests.HTTPError as e:
-        # خطاهای مرتبط با API (مثلاً 401/403/429/5xx)
         try:
             body = e.response.json()
         except Exception:
@@ -195,7 +149,6 @@ def main():
     except Exception as e:
         log(f"❌ Unexpected error: {e}")
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()
