@@ -225,3 +225,34 @@ def main():
 
 if __name__ == "__main__":
     main()
+import csv
+
+def save_to_csv(data, filename="data/cmc_list.csv"):
+    if not data:
+        print("⚠️ No data to save.")
+        return
+
+    # فقط بعضی ستون‌ها برای مثال
+    fields = ["id", "name", "symbol", "cmc_rank", "total_supply"]
+    with open(filename, mode="w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fields)
+        writer.writeheader()
+        for item in data:
+            writer.writerow({
+                "id": item.get("id"),
+                "name": item.get("name"),
+                "symbol": item.get("symbol"),
+                "cmc_rank": item.get("cmc_rank"),
+                "total_supply": item.get("total_supply"),
+            })
+    print(f"💾 Data saved to {filename}")
+
+def main():
+    print("🚀 Starting CMC filter script...")
+    if not CMC_API_KEY:
+        print("❌ ERROR: CMC_API_KEY is not set!")
+        sys.exit(1)
+
+    listings = fetch_listings()
+    save_to_csv(listings)   # ⬅️ ذخیره به CSV
+    print("🎯 Script finished successfully.")
