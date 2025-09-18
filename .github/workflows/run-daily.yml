@@ -10,11 +10,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # --- مرحله 1: گرفتن کد ریپو
+    # --- مرحله 1: گرفتن ریپو
     - name: Checkout repo
       uses: actions/checkout@v3
       with:
-        persist-credentials: false   # تا git push دستی بشه
+        persist-credentials: false
 
     # --- مرحله 2: نصب پایتون
     - name: Set up Python
@@ -22,19 +22,19 @@ jobs:
       with:
         python-version: "3.11"
 
-    # --- مرحله 3: نصب کتابخانه‌ها
+    # --- مرحله 3: نصب وابستگی‌ها
     - name: Install dependencies
       run: pip install -r requirements.txt
 
-    # --- مرحله 4: اجرای اسکریپت با لاگ کامل
+    # --- مرحله 4: اجرای اسکریپت
     - name: Run filter and generate CSV
       env:
         CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
       run: |
-        echo "🚀 Starting cmc_filter.py..."
+        echo "🚀 Running cmc_filter.py"
         python cmc_filter.py || (echo "❌ Script failed!" && exit 1)
 
-    # --- مرحله 5: Commit و Push فایل CSV
+    # --- مرحله 5: Commit و Push
     - name: Commit and push CSV
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -43,4 +43,5 @@ jobs:
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git add data/cmc_list.csv
         git commit -m "Daily update: $(date +'%Y-%m-%d %H:%M:%S')" || echo "⚠️ No changes to commit"
-        git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git HEAD:${{ github.ref }}
+        git pull https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git main --rebase
+        git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git main
