@@ -2,7 +2,7 @@ name: Run CMC Filter Daily
 
 on:
   schedule:
-    - cron: "0 8 * * *"   # هر روز ساعت 08:00 UTC (حدود 11:30 صبح ایران)
+    - cron: "0 8 * * *"   # هر روز ساعت 08:00 UTC
   workflow_dispatch:
 
 jobs:
@@ -19,24 +19,15 @@ jobs:
         python-version: "3.11"
 
     - name: Install dependencies
+      run: pip install -r requirements.txt
+
+    - name: Run filter with logging
       run: |
-        echo "Installing dependencies..."
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; else echo "⚠️ No requirements.txt found"; fi
+        echo "🚀 Starting cmc_filter.py..." > run_log.txt
+        python cmc_filter.py >> run_log.txt 2>&1 || echo "❌ Script failed, check logs." >> run_log.txt
 
-    - name: Test environment
-      run: |
-        echo "Python version:"
-        python --version
-        echo "Files in repo:"
-        ls -la
-
-    - name: Run filter
-      env:
-        CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
-      run: python cmc_filter.py
-
-    - name: Upload results
+    - name: Upload log file
       uses: actions/upload-artifact@v4
       with:
-        name: filtered_coins
-        path: filtered_coins.csv
+        name: cmc-filter-logs
+        path: run_log.txt
