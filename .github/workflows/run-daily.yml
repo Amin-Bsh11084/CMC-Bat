@@ -1,13 +1,9 @@
-name: Run CMC Filter Daily
+name: Run CMC Filter Every 5 Minutes
 
 on:
   schedule:
-    - cron: "0 8 * * *"
-  workflow_dispatch:
-
-# مهم: به توکن اجازهٔ نوشتن بده
-permissions:
-  contents: write
+    - cron: "*/5 * * * *"   # اجرای هر 5 دقیقه یک بار
+  workflow_dispatch:        # اجرای دستی در صورت نیاز
 
 jobs:
   build:
@@ -15,48 +11,28 @@ jobs:
 
     steps:
     - name: Checkout repo
-      uses: actions/checkout@v4
-      with:
-        # تاریخچه کامل بگیر تا rebase بدون مشکل باشد
-        fetch-depth: 0
+      uses: actions/checkout@v3
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v4
       with:
         python-version: "3.11"
 
     - name: Install dependencies
-      run: pip install -r requirements.txt
+      run: |
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-    - name: Run filter and generate CSV
+    - name: Run filter
       env:
         CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
       run: |
-        echo "🚀 Running cmc_filter.py..."
+        echo "Execution time: $(date -u)" >> run_log.txt
         python cmc_filter.py
 
-    # ریموت را با توکن تنظیم کن + pull --rebase + push
-    - name: Commit and push CSV to main
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Commit and push CSV
       run: |
-        git config --global user.name  "github-actions[bot]"
+        git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-        # اگر تغییری نیست، خارج شو تا push بلاسبب نزنیم
-        git add data/cmc_list.csv
-        if git diff --cached --quiet; then
-          echo "⚠️ No changes to commit"
-          exit 0
-        fi
-        git commit -m "Daily update: $(date +'%Y-%m-%d %H:%M:%S')"
-
-        # ریموت با توکن
-        git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
-
-        # همگام‌سازی قبل از پوش برای پرهیز از 128
-        git fetch origin main
-        git rebase origin/main
-
-        # پوش صریح به main
-        git push origin HEAD:main
+        git add *.csv run_log.txt
+        git commit -m "Auto update CSV at $(date -u)" || echo "No changes to commit"
+        git push origin main
