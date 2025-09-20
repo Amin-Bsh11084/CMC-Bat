@@ -26,13 +26,13 @@ jobs:
         CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
       run: |
         mkdir -p data
-        python cmc_filter.py || (echo "❌ خطا در اجرای cmc_filter.py" && exit 1)
+        python cmc_filter.py > run_log.txt 2>&1 || (echo "❌ خطا در اجرای cmc_filter.py" && exit 1)
 
     - name: Commit and push CSV
       run: |
         git config --global user.name "github-actions"
         git config --global user.email "github-actions@github.com"
-        git add data/*.csv || echo "⚠️ No CSV to add"
+        git add data/cmc_output.csv || echo "⚠️ No CSV to add"
         git commit -m "Update CSV data [skip ci]" || echo "⚠️ No changes to commit"
         git pull --rebase origin main || echo "⚠️ Nothing to pull"
         git push origin main || echo "⚠️ Push failed but continuing"
