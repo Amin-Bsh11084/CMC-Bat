@@ -2,11 +2,16 @@ import os
 import requests
 import pandas as pd
 from datetime import datetime
+from loguru import logger
+
+# پیکربندی لاگ
+logger.add("run_log.txt", rotation="1 MB")  # ذخیره لاگ‌ها در فایل محلی هم
 
 # گرفتن API KEY از Secrets
 API_KEY = os.getenv("CMC_API_KEY")
 if not API_KEY:
-    raise ValueError("❌ CMC_API_KEY not found in environment variables")
+    logger.error("❌ CMC_API_KEY not found in environment variables")
+    raise ValueError("CMC_API_KEY not found")
 
 # تنظیمات API
 URL = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest"
@@ -21,10 +26,12 @@ HEADERS = {
 }
 
 def fetch_listings():
-    """دریافت داده از API"""
+    """دریافت داده از CoinMarketCap"""
+    logger.info("📡 Fetching data from CoinMarketCap API...")
     response = requests.get(URL, headers=HEADERS, params=PARAMS)
     response.raise_for_status()
     data = response.json()["data"]
+    logger.success(f"✅ Received {len(data)} records from API")
     return data
 
 def save_to_csv(data):
@@ -34,7 +41,7 @@ def save_to_csv(data):
     timestamp = datetime.utcnow().strftime("%Y-%m-%d_%H-%M")
     output_file = f"data/output_{timestamp}.csv"
     df.to_csv(output_file, index=False)
-    print(f"✅ CSV saved: {output_file}")
+    logger.success(f"💾 CSV saved: {output_file}")
 
 def main():
     listings = fetch_listings()
@@ -43,6 +50,7 @@ def main():
 if __name__ == "__main__":
     try:
         main()
+        logger.info("🎯 Script finished successfully")
     except Exception as e:
-        print(f"❌ خطا در اجرای برنامه: {e}")
+        logger.exception(f"❌ خطا در اجرای برنامه: {e}")
         exit(1)
