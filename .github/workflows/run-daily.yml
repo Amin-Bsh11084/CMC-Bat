@@ -1,9 +1,9 @@
-name: Run CMC Filter Every 5 Minutes
+name: Run CMC Filter Every 5 Min
 
 on:
   schedule:
-    - cron: "*/5 * * * *"   # اجرای هر 5 دقیقه یک بار
-  workflow_dispatch:        # اجرای دستی در صورت نیاز
+    - cron: "*/5 * * * *"   # اجرا هر 5 دقیقه
+  workflow_dispatch:
 
 jobs:
   build:
@@ -19,21 +19,28 @@ jobs:
         python-version: "3.11"
 
     - name: Install dependencies
-      run: |
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      run: pip install -r requirements.txt
 
-    - name: Run filter
-      env:
-        CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
+    - name: Run filter and generate CSV
       run: |
-        echo "Execution time: $(date -u)" >> run_log.txt
+        mkdir -p data
         python cmc_filter.py
+        echo "✅ CSV generated inside ./data"
 
     - name: Commit and push CSV
       run: |
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git pull origin main --rebase || true
-        git add *.csv run_log.txt || true
-        git commit -m "Auto update CSV at $(date -u)" || echo "No changes to commit"
-        git push origin main || echo "Push skipped"
+        git config --global user.name "github-actions"
+        git config --global user.email "github-actions@github.com"
+
+        # بررسی تغییرات
+        git add data/*.csv || echo "⚠️ No CSV to add"
+        git commit -m "Update CSV data [skip ci]" || echo "⚠️ No changes to commit"
+
+        # کشیدن آخرین تغییرات قبل از پوش
+        git pull --rebase origin main || echo "⚠️ Nothing to pull"
+
+        # پوش کردن
+        git push origin main || echo "⚠️ Push failed but continuing"
+
+    - name: Save run log
+      run: echo "Run completed at $(date)" >> run_log.txt
