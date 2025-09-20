@@ -1,7 +1,6 @@
 import os
 import requests
 import pandas as pd
-from datetime import datetime
 from loguru import logger
 
 # پیکربندی لاگ
@@ -17,7 +16,7 @@ if not API_KEY:
 URL = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest"
 PARAMS = {
     "start": "1",
-    "limit": "200",   # می‌تونی تغییر بدی
+    "limit": "200",   # تعداد کوین‌ها
     "convert": "USD"
 }
 HEADERS = {
@@ -35,20 +34,13 @@ def fetch_listings():
     return data
 
 def save_to_csv(data):
-    """ذخیره داده‌ها داخل پوشه data"""
+    """ذخیره داده‌ها فقط در یک فایل ثابت"""
     df = pd.DataFrame(data)
     os.makedirs("data", exist_ok=True)
 
-    # فایل ثابت برای استفاده در گیت‌هاب
     output_file = "data/cmc_output.csv"
     df.to_csv(output_file, index=False, encoding="utf-8-sig")
-    logger.success(f"💾 CSV saved (fixed): {output_file}")
-
-    # فایل پشتیبان با زمان برای آرشیو (اختیاری)
-    timestamp = datetime.utcnow().strftime("%Y-%m-%d_%H-%M")
-    backup_file = f"data/archive_{timestamp}.csv"
-    df.to_csv(backup_file, index=False, encoding="utf-8-sig")
-    logger.info(f"📂 Backup saved: {backup_file}")
+    logger.success(f"💾 CSV saved (replaced old file): {output_file}")
 
 def main():
     listings = fetch_listings()
