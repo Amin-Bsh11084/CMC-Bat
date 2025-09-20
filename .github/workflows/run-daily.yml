@@ -11,7 +11,7 @@ jobs:
 
     steps:
     - name: Checkout repo
-      uses: actions/checkout@v4   # نسخه جدیدتر
+      uses: actions/checkout@v4
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -35,13 +35,10 @@ jobs:
         git config --global user.name "github-actions"
         git config --global user.email "github-actions@github.com"
 
-        # اجبار به add حتی اگر .gitignore محدود کرده باشه
-        git add -f data/cmc_output.csv data/archive_*.csv || echo "⚠️ No CSV to add"
-
+        git add -f data/cmc_output.csv || echo "⚠️ No CSV to add"
         git commit -m "Update CSV data [skip ci]" || echo "⚠️ No changes to commit"
         git pull --rebase origin main || echo "⚠️ Nothing to pull"
 
-        # push با استفاده از GITHUB_TOKEN
         git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git HEAD:main || echo "⚠️ Push failed but continuing"
 
     - name: Upload run log
