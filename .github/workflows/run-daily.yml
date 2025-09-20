@@ -1,8 +1,8 @@
-name: Run CMC Filter Every 5 Min
+name: Run CMC Filter Every 15 Min
 
 on:
   schedule:
-    - cron: "*/5 * * * *"   # اجرا هر 5 دقیقه
+    - cron: "*/15 * * * *"   # اجرا هر 15 دقیقه
   workflow_dispatch:
 
 jobs:
@@ -31,15 +31,9 @@ jobs:
       run: |
         git config --global user.name "github-actions"
         git config --global user.email "github-actions@github.com"
-
-        # بررسی تغییرات
         git add data/*.csv || echo "⚠️ No CSV to add"
         git commit -m "Update CSV data [skip ci]" || echo "⚠️ No changes to commit"
-
-        # کشیدن آخرین تغییرات قبل از پوش
         git pull --rebase origin main || echo "⚠️ Nothing to pull"
-
-        # پوش کردن
         git push origin main || echo "⚠️ Push failed but continuing"
 
     - name: Save run log
