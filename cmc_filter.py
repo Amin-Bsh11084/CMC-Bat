@@ -5,7 +5,7 @@ from datetime import datetime
 from loguru import logger
 
 # پیکربندی لاگ
-logger.add("run_log.txt", rotation="1 MB")  # ذخیره لاگ‌ها در فایل محلی هم
+logger.add("run_log.txt", rotation="1 MB")  # ذخیره لاگ‌ها در فایل محلی
 
 # گرفتن API KEY از Secrets
 API_KEY = os.getenv("CMC_API_KEY")
@@ -38,10 +38,17 @@ def save_to_csv(data):
     """ذخیره داده‌ها داخل پوشه data"""
     df = pd.DataFrame(data)
     os.makedirs("data", exist_ok=True)
+
+    # فایل ثابت برای استفاده در گیت‌هاب
+    output_file = "data/cmc_output.csv"
+    df.to_csv(output_file, index=False, encoding="utf-8-sig")
+    logger.success(f"💾 CSV saved (fixed): {output_file}")
+
+    # فایل پشتیبان با زمان برای آرشیو (اختیاری)
     timestamp = datetime.utcnow().strftime("%Y-%m-%d_%H-%M")
-    output_file = f"data/output_{timestamp}.csv"
-    df.to_csv(output_file, index=False)
-    logger.success(f"💾 CSV saved: {output_file}")
+    backup_file = f"data/archive_{timestamp}.csv"
+    df.to_csv(backup_file, index=False, encoding="utf-8-sig")
+    logger.info(f"📂 Backup saved: {backup_file}")
 
 def main():
     listings = fetch_listings()
