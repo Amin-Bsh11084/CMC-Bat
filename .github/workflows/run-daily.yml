@@ -1,14 +1,13 @@
-name: Run CMC Filter Every 15 Min
+name: Fetch CoinGecko Every 15 Min
 
 on:
   schedule:
-    - cron: "*/15 * * * *"   # اجرا هر 15 دقیقه
+    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
@@ -21,12 +20,10 @@ jobs:
     - name: Install dependencies
       run: pip install -r requirements.txt
 
-    - name: Run filter and generate CSV
-      env:
-        CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
+    - name: Run fetch and generate CSV
       run: |
         mkdir -p data
-        python cmc_filter.py > run_log.txt 2>&1 || (echo "❌ خطا در اجرای cmc_filter.py" && exit 1)
+        python gecko_fetch.py > run_log.txt 2>&1 || (echo "❌ خطا در اجرای gecko_fetch.py" && exit 1)
 
     - name: Commit and push CSV
       env:
@@ -34,11 +31,9 @@ jobs:
       run: |
         git config --global user.name "github-actions"
         git config --global user.email "github-actions@github.com"
-
-        git add -f data/cmc_output.csv || echo "⚠️ No CSV to add"
-        git commit -m "Update CSV data [skip ci]" || echo "⚠️ No changes to commit"
+        git add -f data/gecko_markets.csv || echo "⚠️ No CSV to add"
+        git commit -m "Update gecko markets [skip ci]" || echo "⚠️ No changes to commit"
         git pull --rebase origin main || echo "⚠️ Nothing to pull"
-
         git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git HEAD:main || echo "⚠️ Push failed but continuing"
 
     - name: Upload run log
@@ -50,5 +45,5 @@ jobs:
     - name: Upload CSV artifact
       uses: actions/upload-artifact@v4
       with:
-        name: cmc-output
-        path: data/cmc_output.csv
+        name: gecko-markets
+        path: data/gecko_markets.csv
