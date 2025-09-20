@@ -24,8 +24,7 @@ jobs:
     - name: Run filter and generate CSV
       run: |
         mkdir -p data
-        python cmc_filter.py
-        echo "✅ CSV generated inside ./data"
+        python cmc_filter.py || (echo "❌ خطا در اجرای cmc_filter.py" && exit 1)
 
     - name: Commit and push CSV
       run: |
@@ -36,5 +35,8 @@ jobs:
         git pull --rebase origin main || echo "⚠️ Nothing to pull"
         git push origin main || echo "⚠️ Push failed but continuing"
 
-    - name: Save run log
-      run: echo "Run completed at $(date)" >> run_log.txt
+    - name: Upload run log
+      uses: actions/upload-artifact@v3
+      with:
+        name: run-log
+        path: run_log.txt
